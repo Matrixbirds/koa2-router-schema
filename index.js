@@ -1,15 +1,20 @@
 'use strict';
 const _json = Symbol('#json');
-module.exports = middleware;
-middleware.schema = schema;
-exports._json = middleware._json = _json;
+module.exports = exports = middleware;
+exports.schema = schema;
+exports._json = _json;
+exports.time = {
+  zone: "+0800",
+  format: "YYYY MM DD HH:mm:ss",
+};
 
 const _ = require('lodash');
+const moment = require('moment');
 
 const DEBUG = process.env.DEBUG ? true : false;
 
-function middleware(key, payload) {
-    return async function (routine) {
+function middleware(key, payload, routine) {
+    return async function (ctx, next) {
         if (!routine) throw Error("routine is required");
         ctx[exports._json] = schema(key, payload, ctx.request.body);
         if (DEBUG) {
@@ -17,15 +22,28 @@ function middleware(key, payload) {
             console.log(ctx[exports._json]);
             console.log("DEBUGGING =======");
         }
-        await routine();
+        await routine(ctx, next);
     };
 }
 
 function isType(typename, obj) {
-    if (typename === '[object Number]' && Number.isNaN(obj)) {
+    const plain = {
+        'int': 'Number',
+        'int!': 'Number',
+        'string': 'String',
+        'string!': 'String',
+        'bool': 'Boolean',
+        'bool!': 'Boolean',
+        'array': 'Array',
+        'array!': 'Array',
+        'datetime': 'Date',
+        'datetime!': 'Date',
+    };
+    let type = plain[typename.trim()];
+    if (['int', 'int!'].includes(type) && Number.isNaN(obj)) {
         throw { message: 'NaN is not permit' };
-    } 
-    return Object.prototype.toString.call(obj) === `[object ${_.startCase(typename.replace('!', ''))}]`;
+    }
+    return Object.prototype.toString.call(obj) === `[object ${type}]`;
 }
 
 function schema(key, payload, body) {
@@ -61,7 +79,7 @@ function schema(key, payload, body) {
         const patterns = {
             schema: /type([^{]*)([^}]*)/,
             fields: /(\S+):(.*)/g,
-            properties: /([^:]*):\s*([^:|;]*);/g
+            properties: /([^:|;]*):\s+([^:|;]*)/g
         };
         let _statements = str.split(';');
         if (!_statements) throw Error("missing semicolon")
@@ -78,8 +96,8 @@ function schema(key, payload, body) {
                 let _type = _matcher[1].replace(/\s+/g, '');
                 let _properties = _matcher[2];
                 _result[_type] = {};
-                _properties.match(/(\S+):(.*)/g).join(';')
-                    .replace(/([^:|;]*):\s+([^:|;]*)/g,
+                _properties.match(patterns.fields).join(';')
+                    .replace(patterns.properties,
                         (_, key, value) => {
                             _result[_type][key] = value;
                         }
@@ -90,11 +108,17 @@ function schema(key, payload, body) {
         return _result;
     }
 
+    function handleDateType(obj) {
+        console.log(obj);
+        return new moment(obj).utcOffset(exports.time.zone).format(exports.time.format);
+    }
+
     function required({ val, name, type }) {
-        if (!val) {
+        if (![0, NaN, Infinity].includes(val) && !val) {
             this[name] = { reason: `params missing ${name}`, type: 'params missing' };
             return;
         }
+        if (['datetime', 'datetime!'].includes(type) && val) return handleDateType(val);
         if (!isType(type, val)) {
             this[name] = { reason: `params ${name} value should be ${type}`, type: 'params types' };
             return;
@@ -107,6 +131,7 @@ function schema(key, payload, body) {
             this[name] = { reason: `params ${name} value should be ${type}`, type: 'params types' };
             return;
         }
+        if (type === '[object Date]' && obj) return handleDateType(val);
         return val;
     }
 
@@ -129,9 +154,9 @@ function schema(key, payload, body) {
     function _parser(plain, lexical, body) {
         if (typeof lexical !== 'object')
             throw { message: 'lexical should be a object' };
-        let _result = {};
-        let _errs = {};
+        let _result = { errors: {} };
         for (let field_name in lexical) {
+            let _errs = {};
             _result[field_name] = _lexical[field_name] || {};
             for (let [key, type] of Object.entries(lexical[field_name])) {
                 let val = _.get(body, `${field_name}.${key}`)
@@ -140,8 +165,8 @@ function schema(key, payload, body) {
                             required.call(_errs, {val, name: key, type}) :
                             optional.call(_errs, {val, name: key, type});
             }
+            if (Object.entries(_errs).length) _result.errors[field_name] = _errs;
         }
-        _result.errors = _errs;
         if (DEBUG) {
             console.log("_parser========");
             console.log(_result);

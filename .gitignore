@@ -4,3 +4,4 @@ coverage/*
 *.DS_Store
 .nvmrc
 .nyc_output
+*.log
