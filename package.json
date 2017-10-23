@@ -1,0 +1,38 @@
+{
+  "name": "koa2-router-schema",
+  "version": "0.0.1",
+  "description": "koa2-router-schema",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test NODE_PATH=. nyc --reporter=html --reporter=text mocha test.js --opts .mocharc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Matrixbirds/koa2-router-schema.git"
+  },
+  "keywords": [
+    "koa2",
+    "router",
+    "schema"
+  ],
+  "author": "matrixbirds",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Matrixbirds/koa2-router-schema/issues"
+  },
+  "homepage": "https://github.com/Matrixbirds/koa2-router-schema#readme",
+  "dependencies": {
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "co-mocha": "^1.2.1",
+    "istanbul": "^0.4.5",
+    "koa": "^2.3.0",
+    "koa-bodyparser": "^4.2.0",
+    "koa-router": "^7.2.1",
+    "mocha": "^4.0.1",
+    "nyc": "^11.2.1",
+    "supertest": "^3.0.0"
+  }
+}
