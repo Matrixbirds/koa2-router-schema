@@ -34,6 +34,18 @@ describe("#schema", function () {
             expect(result.data.name).to.equal('1024');
             expect(result.data.password).to.equal('1024');
         });
+        it ("array!# should return data", function () {
+            result = schema('data', `
+            type data {
+                attributes: array!
+            }
+            `, {
+                data: {
+                    attributes: [{item: 1}],
+                }
+            });
+            expect(result.data.attributes.length).above(0);
+        });
     });
 
     context("invalid params", function () {
@@ -56,6 +68,19 @@ describe("#schema", function () {
             expect(result.errors.data.name.type).to.equal("params types");
             expect(result.errors.data.password.reason).to.equal("params password value should be string!");
             expect(result.errors.data.password.type).to.equal("params types");
+        });
+        it ("array!# return errors", function () {
+            result = schema('data', `
+            type data {
+                attributes: array!
+            }
+            `, {
+                data: {
+                    attributes: 0,
+                }
+            });
+            expect(result.errors.data.attributes.type).to.equal("params types");
+            expect(result.errors.data.attributes.reason).to.equal("params attributes value should be array!");
         });
     });
 });

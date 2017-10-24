@@ -109,7 +109,6 @@ function schema(key, payload, body) {
     }
 
     function handleDateType(obj) {
-        console.log(obj);
         return new moment(obj).utcOffset(exports.time.zone).format(exports.time.format);
     }
 
