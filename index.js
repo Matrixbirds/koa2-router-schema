@@ -1,22 +1,25 @@
 'use strict';
 const _json = Symbol('#json');
+const _error = Symbol('#error');
 module.exports = exports = middleware;
 exports.schema = schema;
 exports._json = _json;
 exports.time = {
-  zone: "+0800",
-  format: "YYYY MM DD HH:mm:ss",
+    zone: "+0800",
+    format: "YYYY-MM-DD HH:mm:ss",
 };
 
 const _ = require('lodash');
 const moment = require('moment');
 
-const DEBUG = process.env.DEBUG ? true : false;
+const DEBUG = process.env.DEBUGGER ? true : false;
 
 function middleware(key, payload, routine) {
+    if (!routine) throw Error("routine is required");
     return async function (ctx, next) {
-        if (!routine) throw Error("routine is required");
         ctx[exports._json] = schema(key, payload, ctx.request.body);
+        ctx[_error] = exports.errorHandler || function noop() {};
+        ctx[_error] && ctx[_error].apply(this, arguments);
         if (DEBUG) {
             console.log("DEBUGGING =======");
             console.log(ctx[exports._json]);

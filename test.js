@@ -88,6 +88,7 @@ describe("#schema", function () {
 function request(app) {
   return supertest(app.listen());
 }
+// ctx[_error] = exports.errorHandler || function noop() {};
 describe("POST /login", function () {
     let result;
     context("invalid request params", function () {
@@ -115,3 +116,105 @@ describe("POST /login", function () {
         });
     })
 })
+
+exports._app2 = function (routine) {
+
+    const expose = Object.assign;
+
+    const koa = require('koa');
+    const Router = require('koa-router');
+    const bodyParser = require('koa-bodyparser');
+    const app = new koa();
+
+    const schema = require('./index');
+
+    const _json = schema._json;
+
+    const router = require('koa-router')();
+
+    const payload = require('./_params-schema');
+
+    schema.errorHandler = function(ctx, next) {
+        if (ctx[schema._json].errors && Object.entries(ctx[schema._json].errors).length)  {
+            ctx.throw(400, 'params errors', { describe:  ctx[schema._json].errors});
+        }
+    }
+
+    router.post('/login', schema('request', payload,
+        async function(ctx, next) {
+            ctx.status = 200;
+            ctx.body = { data: ctx[_json].data };
+          }
+    ));
+
+    app.use(routine);
+    app.use(bodyParser());
+    app.use(router.routes());
+    return app;
+}
+
+describe.only("#_error", function () {
+    it ("custom error handler", function *() {
+        let resp = yield request(exports._app2(async function (ctx, next) {
+            try {
+                await next();
+            } catch(err) {
+                ctx.body = {
+                    errors: err.describe
+                };
+                ctx.status = err.status;
+                ctx.app.emit('error', err, ctx);
+            }
+        })).post("/login").send({
+            data: {
+                name: 1,
+                password: 1,
+            }
+        });
+        expect(resp.body).to.have.property('errors')
+            .to.have.property('data')
+            .to.deep.equal({
+                "name": {
+                    "reason":"params name value should be string!",
+                    "type":"params types"
+                },
+                "password": {
+                    "reason":"params password value should be string!",
+                    "type":"params types"
+                },
+                "datetime": {
+                    "reason":"params missing datetime",
+                    "type":"params missing"
+                }
+            });
+        expect(resp.status).to.equal(400);
+    });
+    it ("should response 200 with custom error handler", function *() {
+        let resp = yield request(exports._app2(async function (ctx, next) {
+            try {
+                await next();
+            } catch(err) {
+                ctx.body = {
+                    errors: err.describe
+                };
+                ctx.status = err.status;
+                ctx.app.emit('error', err, ctx);
+            }
+        })).post("/login").send({
+            data: {
+                name: '1',
+                password: '1',
+                datetime: '2017-01-02 22:00:00',
+            }
+        });
+        expect(resp.body).to.have.property('data')
+            .to.deep.equal({
+                "name": '1',
+                "password": '1',
+                "datetime": '2017-01-02 22:00:00'
+            });
+
+        expect(resp.status).to.equal(200);
+    });
+
+});
