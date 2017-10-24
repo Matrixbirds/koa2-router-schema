@@ -22,6 +22,11 @@ const router = require('koa-router')();
 
 const payload = require('./_params-schema');
 
+schema.errorHanlder = function(ctx, next) {
+    if (ctx[schema._json].errors && Object.entries(ctx[schema._json].errors).length)
+        ctx.throw(400, 'params errors', { describe : ctx[schema._json].errors });
+}
+
 router.post('/login', schema('request', 
      `
         type data {
