@@ -46,6 +46,19 @@ describe("#schema", function () {
             });
             expect(result.data.attributes.length).above(0);
         });
+        it ("array!# should return origin plain array", function () {
+            result = schema('data', `
+            type data {
+                attributes: array!
+            }
+            `, {
+                data: {
+                    attributes: [],
+                }
+            })
+            expect(result.data.attributes.length).equal(0);
+            expect(result.data.attributes[0]).to.equal(undefined);
+        });
     });
 
     context("invalid params", function () {
@@ -153,7 +166,7 @@ exports._app2 = function (routine) {
     return app;
 }
 
-describe.only("#_error", function () {
+describe("#_error", function () {
     it ("custom error handler", function *() {
         let resp = yield request(exports._app2(async function (ctx, next) {
             try {
