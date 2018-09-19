@@ -22,8 +22,8 @@
   },
   "homepage": "https://github.com/Matrixbirds/koa2-router-schema#readme",
   "dependencies": {
-    "lodash": "^4.17.4",
-    "moment": "^2.18.1"
+    "lodash": "^4.17.11",
+    "moment": "^2.22.2"
   },
   "devDependencies": {
     "chai": "^4.1.2",
